@@ -46,7 +46,10 @@ jobs:
         env:
           CI: "true"
         run: |
-          npm install --no-audit --no-fund
+          # --ignore-scripts: skip the dead phantomjs postinstall (a test-only dep that downloads
+          # a now-unavailable binary and crashes the install). The build chain is pure JS (dart-sass,
+          # postcss), so no needed native postinstall is lost.
+          npm install --no-audit --no-fund --ignore-scripts
           npm install -g bower
           bower install --allow-root --config.interactive=false
           npx gulp build
