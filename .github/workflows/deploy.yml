@@ -1,0 +1,65 @@
+name: Build & deploy admin webapp to Pages
+
+# The admin UI source lives in the main OpenSO repo (TSOClient/FSO.Server/Admin).
+# This workflow checks out just that subtree, builds the legacy AngularJS bundle
+# (Node 20 + npm + bower + gulp), and deploys the static dist/ to GitHub Pages
+# (admin.openso.org). It deliberately keeps no source copy here to avoid drift —
+# re-run it (push or "Run workflow") whenever the admin source changes upstream.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout admin source from voicemxil/OpenSO
+        uses: actions/checkout@v4
+        with:
+          repository: voicemxil/OpenSO
+          ref: main
+          sparse-checkout: |
+            TSOClient/FSO.Server/Admin
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build bundle
+        working-directory: TSOClient/FSO.Server/Admin
+        env:
+          CI: "true"
+        run: |
+          npm install --no-audit --no-fund
+          npm install -g bower
+          bower install --allow-root --config.interactive=false
+          npx gulp build
+          # Keep the custom domain on every deploy.
+          echo "admin.openso.org" > dist/CNAME
+          echo "=== dist/ contents ==="
+          ls -la dist/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: TSOClient/FSO.Server/Admin/dist
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
