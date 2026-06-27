@@ -51,7 +51,10 @@ jobs:
           # postcss), so no needed native postinstall is lost.
           npm install --no-audit --no-fund --ignore-scripts
           npm install -g bower
-          bower install --allow-root --config.interactive=false
+          # --production drops the test-only angular-mocks (pins old angular 1.3.x, conflicts with the
+          # app's ^1.6.1); --force-latest auto-resolves any remaining version conflict instead of
+          # prompting (the install is non-interactive).
+          bower install --production --force-latest --allow-root --config.interactive=false
           npx gulp build
           # Keep the custom domain on every deploy.
           echo "admin.openso.org" > dist/CNAME
